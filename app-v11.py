@@ -1,10 +1,10 @@
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_community.vectorstores import FAISS
@@ -12,12 +12,9 @@ from llama_parse import LlamaParse
 
 load_dotenv()
 
+
 def get_pdf_text():
-    parsingInstructionTable = """Dit is een studiehandleiding met verschillende tabellen.
-    Bijvoorbeeld worden competenties met bijbehorende niveaus opgesplitst in afzonderlijke tabellen. Hier is de eerste regel een merged cel is met de beschrijving van de competentie - bijvoorbeeld
-    9. Handelen vanuit waarden: De startende bedrijfskundige professional handelt vanuit een waardenbesef en heeft bij het zoeken naar oplossingen voor bedrijfskundige vraagstukken oog voor mogelijke consequenties van (bewuste of onbewuste) keuzes en handelingen op de langere termijn.
-    Daaronder volgen drie cellen met de niveautitels: Niveau 1 | Niveau 2 | Niveau 3
-    Daaronder de beschrijvingen van ieder niveau: Kan handelen volgens algemeen aanvaarde of professionele sociale en ethische normen en waarden. Gaat daarbij zorgvuldig en discreet om met informatie over personen en/of de organisatie. | Heeft zicht op de mogelijke consequenties van bedrijfskundig handelen voor stakeholders, milieu en maatschappij. | Legt verantwoording af over gemaakte keuzes op basis van het eigen morele kompas als professioneel normerende kaders. Streeft aantoonbaar naar duurzame maatschappelijke verantwoordde bedrijfskundige oplossingen."""
+    parsingInstructionTable = """Dit is een studiehandleiding met verschillende tabellen.Hoe de informatie in tabellen zoveel mogelijk bij elkaar."""
 
     parser = LlamaParse(
         # can also be set in your env as LLAMA_CLOUD_API_KEY
@@ -31,6 +28,7 @@ def get_pdf_text():
     # async
     documents = parser.load_data("./doc.pdf")
     text = documents[0].text
+    print(text)
     return text
 
 def get_text_chunks(text):
@@ -46,13 +44,23 @@ def get_text_chunks(text):
 
 def get_vectorstore(text_chunks):
     embeddings = OpenAIEmbeddings()
+
+    # model_name = "hkunlp/instructor-xl"
+    # model_kwargs = {'device': 'cpu'}
+    # encode_kwargs = {'normalize_embeddings': False}
+    # embeddings = HuggingFaceEmbeddings(
+    #     model_name=model_name,
+    #     model_kwargs=model_kwargs,
+    #     encode_kwargs=encode_kwargs
+    # )
+    embeddings = embeddings
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
 
 def get_response(user_query, chat_history, vectorstore):
-
+    
     llm = ChatOpenAI()
-
+    llm = llm
     retriever = vectorstore.as_retriever()
 
     ### Contextualize question ###
@@ -108,7 +116,7 @@ def main():
     # create vector store
     vectorstore = get_vectorstore(text_chunks)
 
-# app config
+    # app config
     st.set_page_config(page_title="Streaming bot", page_icon="🤖")
     st.title("Streaming bot")
 
