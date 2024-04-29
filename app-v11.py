@@ -28,7 +28,6 @@ def get_pdf_text():
     # async
     documents = parser.load_data("./doc.pdf")
     text = documents[0].text
-    print(text)
     return text
 
 def get_text_chunks(text):
